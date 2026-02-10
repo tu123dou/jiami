@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>加密解密</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 20px; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        h2 { font-size: 20px; margin-bottom: 12px; color: #333; text-align: center; }
+        label,.label { display: block; font-weight: 600; margin-bottom: 5px; color: #555; font-size: 14px; }
+        input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s; }
+        .input-wrapper input { padding-right: 36px; margin-bottom: 10px; }
+        input:focus, textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+        textarea { resize: vertical; min-height: 70px; font-family: 'Courier New', monospace; }
+        .button-group { display: flex; gap: 8px; margin-bottom: 12px; }
+        .button-group button { flex: 1; padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .button-group button:nth-child(1) { background: #667eea; color: white; }
+        .button-group button:nth-child(1):active { background: #5568d3; }
+        .button-group button:nth-child(2) { background: #48bb78; color: white; }
+        .button-group button:nth-child(2):active { background: #38a169; }
+        .button-group button:nth-child(3) { background: #f97316; color: white; }
+        .button-group button:nth-child(3):active { background: #ea580c; }
+        .result { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+        .result label { margin-top: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .copy-btn { background: #667eea; color: white; border: none; padding: 4px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; }
+        .copy-btn:hover { background: #5568d3; }
+        .copy-btn:active { background: #4452bb; }
+        .error { color: #d32f2f; margin-top: 10px; font-weight: bold; padding: 10px; background: #ffebee; border-radius: 4px; border-left: 3px solid #d32f2f; }
+        .input-wrapper { position: relative; margin-bottom: 10px; }
+        .clear-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-65%); background: none; border: none; font-size: 16px; cursor: pointer; color: #999; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .clear-btn:hover { color: #333; }
+
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            .container { padding: 12px; }
+            h2 { font-size: 18px; margin-bottom: 10px; }
+            label { font-size: 13px; margin-bottom: 4px; }
+            input, textarea { font-size: 16px; padding: 8px; margin-bottom: 8px; }
+            button { padding: 9px 12px; font-size: 13px; }
+            .button-group { gap: 6px; margin-bottom: 10px; }
+            textarea { min-height: 60px; }
+            .result { margin-top: 10px; padding-top: 10px; }
+            .result label { margin-top: 6px; }
+        }
+        @media (max-width: 360px) {
+            .container { padding: 10px; }
+            h2 { font-size: 16px; margin-bottom: 8px; }
+            input, textarea { font-size: 16px; padding: 8px; margin-bottom: 6px; }
+            button { padding: 8px 10px; font-size: 12px; }
+            .button-group { gap: 5px; margin-bottom: 8px; }
+            textarea { min-height: 50px; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>🔐 加密解密工具</h2>
+        <label>单词：</label>
+        <div class="input-wrapper">
+            <input type="text" id="word" placeholder="请输入英文单词">
+            <button class="clear-btn" id="wordClear" onclick="clearInput('word')">✕</button>
+        </div>
+        <label>密钥：</label>
+        <div class="input-wrapper">
+            <input type="text" id="key" placeholder="请输入密钥（建议32个字符）">
+            <button class="clear-btn" id="keyClear" onclick="clearInput('key')">✕</button>
+        </div>
+        <div class="button-group">
+            <button onclick="handleEncrypt()">🔒 加密</button>
+            <button onclick="decrypt()">🔓 解密</button>
+        </div>
+
+        <div class="result">
+            <div class="label">
+                加密结果
+                <button class="copy-btn" onclick="copyToClipboard('encrypted')">📋 复制</button>
+            </div>
+            <textarea id="encrypted" placeholder="加密后的内容会显示在这里"></textarea>
+
+            <div class="label">
+                解密结果
+                <button class="copy-btn" onclick="copyToClipboard('decrypted')">📋 复制</button>
+            </div>
+            <textarea id="decrypted" placeholder="解密后的内容会显示在这里"></textarea>
+        </div>
+    </div>
+    <script>
+        // 复制到剪贴板
+        async function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.value;
+            if (!text) {
+                return;
+            }
+            // 使用现代 Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+            }
+        }
+
+        // 字符串转Uint8Array
+        function str2arr(str) {
+            return new TextEncoder().encode(str);
+        }
+        // Uint8Array转字符串
+        function arr2str(arr) {
+            return new TextDecoder().decode(arr);
+        }
+        // ArrayBuffer转Base64
+        function ab2b64(ab) {
+            return btoa(String.fromCharCode(...new Uint8Array(ab)));
+        }
+        // Base64转ArrayBuffer
+        function b64toab(b64) {
+            return Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+        }
+
+        // 密钥导入
+        async function getKey(keyStr) {
+            return await window.crypto.subtle.importKey(
+                "raw",
+                str2arr(keyStr),
+                { name: "AES-CBC" },
+                false,
+                ["encrypt", "decrypt"]
+            );
+        }
+
+        // 加密（自动生成IV并合并）
+        async function encrypt() {
+            const word = document.getElementById('word').value;
+            const key = document.getElementById('key').value;
+            if (!word || !key) {
+                alert('请输入单词和密钥！');
+                return;
+            }
+            const iv = window.crypto.getRandomValues(new Uint8Array(16));
+            const cryptoKey = await getKey(key);
+            const ciphertext = await window.crypto.subtle.encrypt(
+                { name: "AES-CBC", iv: iv },
+                cryptoKey,
+                str2arr(word)
+            );
+            // 合并IV和密文（Base64编码+冒号分隔）
+            const combined = ab2b64(iv) + ':' + ab2b64(ciphertext);
+            document.getElementById('encrypted').value = combined;
+        }
+
+        async function handleEncrypt() {
+            try {
+                await encrypt();
+            } catch (e) {
+                console.log(e);
+                const key = document.getElementById('key').value;
+                alert('密钥需要输入32位或16位字母或数字或特殊符号, 现在是' + key.length + '位');
+            }
+        }
+
+        // 解密（自动拆分IV和密文）
+        async function decrypt() {
+            const combined = document.getElementById('encrypted').value;
+            const key = document.getElementById('key').value;
+            if (!combined || !key) {
+                alert('请输入密文和密钥！');
+                return;
+            }
+            const [ivb64, encryptedb64] = combined.split(':');
+            if (!ivb64 || !encryptedb64) {
+                document.getElementById('decrypted').value = '密文格式错误！';
+                return;
+            }
+            const cryptoKey = await getKey(key);
+            try {
+                const plaintext = await window.crypto.subtle.decrypt(
+                    { name: "AES-CBC", iv: new Uint8Array(b64toab(ivb64)) },
+                    cryptoKey,
+                    b64toab(encryptedb64)
+                );
+                document.getElementById('decrypted').value = arr2str(new Uint8Array(plaintext));
+            } catch (e) {
+                document.getElementById('decrypted').value = '解密失败（密钥或密文错误）';
+            }
+        }
+        // 清空单个输入框
+        function clearInput(inputId) {
+            const input = document.getElementById(inputId);
+            input.value = '';
+            input.focus();
+        }
+    </script>
+</body>
+</html>
